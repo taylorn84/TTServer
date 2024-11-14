@@ -102,7 +102,7 @@ podman run -d --name transmission \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/transmission:/config \
   -v ${DOWNLOADS_PATH}:/downloads \
-  lscr.io/linuxserver/transmission
+  lscr.io/linuxserver/transmission:latest
 
 # Prowlarr
 podman run -d --name prowlarr \
@@ -111,7 +111,7 @@ podman run -d --name prowlarr \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/prowlarr:/config \
-  lscr.io/linuxserver/prowlarr
+  lscr.io/linuxserver/prowlarr:develop
 
 # Jellyfin
 podman run -d --name jellyfin \
@@ -121,7 +121,7 @@ podman run -d --name jellyfin \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/jellyfin:/config \
   -v ${MEDIA_PATH}:/media \
-  jellyfin/jellyfin
+  lscr.io/linuxserver/jellyfin:latest
 
 # Jellyseerr
 podman run -d --name jellyseerr \
@@ -130,7 +130,7 @@ podman run -d --name jellyseerr \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/jellyseerr:/config \
-  fallenbagel/jellyseerr
+  lscr.io/fallenbagel/jellyseerr
 
 # Nginx Proxy Manager
 podman run -d --name nginx-proxy-manager \
@@ -141,7 +141,7 @@ podman run -d --name nginx-proxy-manager \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/nginx-proxy-manager/data:/data \
   -v ${CONFIG_DIR}/nginx-proxy-manager/letsencrypt:/etc/letsencrypt \
-  jc21/nginx-proxy-manager
+  lscr.io/jc21/nginx-proxy-manager
 
 # Homepage
 podman run -d --name homepage \
