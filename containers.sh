@@ -26,7 +26,7 @@ PGID=$(id -g ttserver)
 
 # Create the base folder structure with required subdirectories
 echo "Setting up folder structure under $BASE_DIR..."
-mkdir -p "$CONFIG_DIR"/{sonarr,radarr,lidarr,readarr,transmission,prowlarr,jellyfin,jellyseerr,nginx-proxy-manager/data,nginx-proxy-manager/letsencrypt,homepage}
+mkdir -p "$CONFIG_DIR"/{sonarr,radarr,lidarr,readarr,transmission,prowlarr,jellyfin,jellyseerr,nginx-proxy-manager/{data,letsencrypt},homepage}
 mkdir -p "$MEDIA_DIR"/{TV/{Shows,"Kids Shows"},Movies/{Films,"Kids Films"},Books/{Ebooks,Audiobooks},Music}
 mkdir -p "$DOWNLOADS_DIR"
 
