@@ -1,83 +1,160 @@
 #!/bin/bash
 
-# Update package list and install Cockpit
-echo "Installing Cockpit..."
-sudo apt-get update
-sudo apt-get install -y cockpit
+# Define the base directory for ttserver setup
+BASE_DIR="$HOME/ttserver"
+CONFIG_DIR="$BASE_DIR/config"
+MEDIA_DIR="$BASE_DIR/media"
+DOWNLOADS_DIR="$BASE_DIR/downloads"
 
-# Enable and start Cockpit service
-echo "Enabling and starting Cockpit service..."
-sudo systemctl enable --now cockpit.socket
+# Create the base folder structure
+echo "Setting up folder structure under $BASE_DIR..."
+mkdir -p "$CONFIG_DIR"/{sonarr,radarr,lidarr,readarr,transmission,prowlarr,jellyfin,jellyseerr,nginx-proxy-manager,homepage}
+mkdir -p "$MEDIA_DIR"/{TV/{Shows,"Kids Shows"},Movies/{Films,"Kids Films"},Books/{Ebooks,Audiobooks},Music}
+mkdir -p "$DOWNLOADS_DIR"
 
-# Create directory for custom Cockpit socket configuration
-echo "Setting custom port for Cockpit..."
-sudo mkdir -p /etc/systemd/system/cockpit.socket.d/
-sudo bash -c 'cat > /etc/systemd/system/cockpit.socket.d/listen.conf' << EOF
-[Socket]
-ListenStream=
-ListenStream=2400
-EOF
+# Check if .env file exists in BASE_DIR; if not, create it with default values
+ENV_FILE="$BASE_DIR/.env"
+if [ ! -f "$ENV_FILE" ]; then
+  echo "Creating .env file with default values at $ENV_FILE..."
+  cat <<EOL > "$ENV_FILE"
+# Base paths and environment variables for the ttserver setup
+BASE_PATH=$CONFIG_DIR
+DOWNLOADS_PATH=$DOWNLOADS_DIR
+MEDIA_PATH=$MEDIA_DIR
+PUID=1000
+PGID=1000
+TZ=Asia/Dubai
+EOL
+  echo ".env file created with default values. Please modify it as needed."
+else
+  echo ".env file already exists. Loading values..."
+fi
 
-# Reload and restart Cockpit service
-sudo systemctl daemon-reload
-sudo systemctl restart cockpit.socket
+# Load environment variables from the .env file
+export $(grep -v '^#' "$ENV_FILE" | xargs)
 
-# Configure Netplan network settings
-echo "Configuring network settings with Netplan..."
-sudo bash -c 'cat > /etc/netplan/00-installer-config.yaml' << EOF
-network:
-  version: 2
-  renderer: NetworkManager
-  ethernets:
-    esp4so:
-      dhcp4: false
-      dhcp6: false
-      addresses:
-        - 192.168.31.24/24
-      routes:
-        - to: default
-          via: 192.168.31.1
-      nameservers:
-        addresses: [8.8.8.8,8.8.4.4,192.168.31.1]
-EOF
+# Install Podman if it's not already installed
+if ! command -v podman &> /dev/null; then
+  echo "Podman not found. Installing Podman..."
+  sudo apt update
+  sudo apt install -y podman
+else
+  echo "Podman is already installed."
+fi
 
-# Apply Netplan configuration
-sudo netplan try
+# Ensure the script has executable permissions (self-set)
+chmod +x "$0"
 
-# Add 45Drives repository and update package list
-echo "Adding 45Drives repository and updating..."
-curl -sSL https://repo.45drives.com/setup | sudo bash
-sudo apt-get update
+# Run each container individually with correct image addresses and develop versions where applicable
 
-# Install additional Cockpit modules
-echo "Installing Cockpit modules..."
-sudo apt install -y cockpit-file-sharing cockpit-navigator
+# Sonarr (develop version)
+podman run -d --name sonarr \
+  -p 2406:8989 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/sonarr:/config \
+  -v ${DOWNLOADS_PATH}:/downloads \
+  -v "${MEDIA_PATH}/TV/Shows":/tv \
+  -v "${MEDIA_PATH}/TV/Kids Shows":/tv-kids \
+  lscr.io/linuxserver/sonarr:develop
 
-# Create directory /ttserver and set permissions
-echo "Creating /ttserver directory and setting ownership..."
-sudo mkdir -p /ttserver
-sudo chown -R ttserver:ttserver /ttserver
+# Radarr (develop version)
+podman run -d --name radarr \
+  -p 2407:7878 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/radarr:/config \
+  -v ${DOWNLOADS_PATH}:/downloads \
+  -v "${MEDIA_PATH}/Movies/Films":/movies \
+  -v "${MEDIA_PATH}/Movies/Kids Films":/movies-kids \
+  lscr.io/linuxserver/radarr:develop
 
-# Install Samba
-echo "Installing Samba..."
-sudo apt install -y samba
+# Lidarr (develop version)
+podman run -d --name lidarr \
+  -p 2408:8686 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/lidarr:/config \
+  -v ${DOWNLOADS_PATH}:/downloads \
+  -v ${MEDIA_PATH}/Music:/music \
+  lscr.io/linuxserver/lidarr:develop
 
-# Create Samba user with specific password
-echo "Creating Samba user 'nfserver' with password 'PenelopeTT2901'..."
-(echo "PenelopeTT2901"; echo "PenelopeTT2901") | sudo smbpasswd -a nfserver
+# Readarr (develop version)
+podman run -d --name readarr \
+  -p 2409:8787 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/readarr:/config \
+  -v ${DOWNLOADS_PATH}:/downloads \
+  -v "${MEDIA_PATH}/Books/Ebooks":/ebooks \
+  -v "${MEDIA_PATH}/Books/Audiobooks":/audiobooks \
+  lscr.io/linuxserver/readarr:develop
 
-# Configure Samba to share /nfserver
-echo "Configuring Samba share..."
-sudo mkdir -p /nfserver
-sudo bash -c 'cat >> /etc/samba/smb.conf' << EOF
+# Transmission
+podman run -d --name transmission \
+  -p 2402:9091 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/transmission:/config \
+  -v ${DOWNLOADS_PATH}:/downloads \
+  lscr.io/linuxserver/transmission
 
-[NFServer]
-  path = /nfserver
-  read only = no
-  inherit permissions = yes
-EOF
+# Prowlarr
+podman run -d --name prowlarr \
+  -p 2403:9117 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/prowlarr:/config \
+  lscr.io/linuxserver/prowlarr
 
-# Restart Samba service
-sudo systemctl restart smbd
+# Jellyfin
+podman run -d --name jellyfin \
+  -p 2410:8096 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/jellyfin:/config \
+  -v ${MEDIA_PATH}:/media \
+  jellyfin/jellyfin
 
-echo "Setup completed successfully!"
+# Jellyseerr
+podman run -d --name jellyseerr \
+  -p 2411:5055 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/jellyseerr:/config \
+  fallenbagel/jellyseerr
+
+# Nginx Proxy Manager
+podman run -d --name nginx-proxy-manager \
+  -p 2404:80 \
+  -p 2405:443 \
+  -e PUID=$PUID \
+  -e PGID=$PGID \
+  -e TZ=$TZ \
+  -v ${CONFIG_DIR}/nginx-proxy-manager/data:/data \
+  -v ${CONFIG_DIR}/nginx-proxy-manager/letsencrypt:/etc/letsencrypt \
+  jc21/nginx-proxy-manager
+
+# Homepage
+podman run -d --name homepage \
+  -p 2401:3000 \
+  -v ${CONFIG_DIR}/homepage:/app/config \
+  -v ${MEDIA_PATH}:/media \
+  -v ${DOWNLOADS_PATH}:/downloads \
+  ghcr.io/benphelps/homepage:latest
+
+# FlareSolverr
+podman run -d --name flaresolverr \
+  -p 2412:8191 \
+  -e LOG_LEVEL=info \
+  -e LOG_HTML=false \
+  -e CAPTCHA_SOLVER=none \
+  ghcr.io/flaresolverr/flaresolverr:latest
