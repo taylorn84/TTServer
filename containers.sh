@@ -130,7 +130,7 @@ podman run -d --name jellyseerr \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/jellyseerr:/config \
-  fallenbagel/jellyseerr:develop
+  docker.io/fallenbagel/jellyseerr:develop
 
 # Nginx Proxy Manager
 podman run -d --name nginx-proxy-manager \
@@ -141,7 +141,7 @@ podman run -d --name nginx-proxy-manager \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/nginx-proxy-manager/data:/data \
   -v ${CONFIG_DIR}/nginx-proxy-manager/letsencrypt:/etc/letsencrypt \
-  jc21/nginx-proxy-manager:latest
+  docker.io/jc21/nginx-proxy-manager:latest
 
 # Homepage
 podman run -d --name homepage \
