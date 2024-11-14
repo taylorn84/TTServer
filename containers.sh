@@ -17,7 +17,7 @@ ENV_FILE="$BASE_DIR/.env"
 if [ ! -f "$ENV_FILE" ]; then
   echo "Creating .env file with default values at $ENV_FILE..."
   cat <<EOL > "$ENV_FILE"
-# Base paths and environment variables for the ttserver pod
+# Base paths and environment variables for the ttserver setup
 BASE_PATH=$CONFIG_DIR
 DOWNLOADS_PATH=$DOWNLOADS_DIR
 MEDIA_PATH=$MEDIA_DIR
@@ -45,25 +45,11 @@ fi
 # Ensure the script has executable permissions (self-set)
 chmod +x "$0"
 
-# Create the Pod without comments in-between
-echo "Creating Podman pod and starting services..."
-podman pod create --name ttserver \
-  --publish 2406:8989 \
-  --publish 2407:7878 \
-  --publish 2408:8686 \
-  --publish 2409:8787 \
-  --publish 2403:9117 \
-  --publish 2410:8096 \
-  --publish 2411:5055 \
-  --publish 2402:9091 \
-  --publish 2401:3000 \
-  --publish 2404:80 \
-  --publish 2405:443
+# Run each container individually with correct image addresses and develop versions where applicable
 
-# Start each container within the ttserver Pod
-
-# Sonarr
-podman run -d --name sonarr --pod ttserver \
+# Sonarr (develop version)
+podman run -d --name sonarr \
+  -p 2406:8989 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -71,10 +57,11 @@ podman run -d --name sonarr --pod ttserver \
   -v ${DOWNLOADS_PATH}:/downloads \
   -v "${MEDIA_PATH}/TV/Shows":/tv \
   -v "${MEDIA_PATH}/TV/Kids Shows":/tv-kids \
-  lscr.io/linuxserver/sonarr
+  lscr.io/linuxserver/sonarr:develop
 
-# Radarr
-podman run -d --name radarr --pod ttserver \
+# Radarr (develop version)
+podman run -d --name radarr \
+  -p 2407:7878 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -82,20 +69,22 @@ podman run -d --name radarr --pod ttserver \
   -v ${DOWNLOADS_PATH}:/downloads \
   -v "${MEDIA_PATH}/Movies/Films":/movies \
   -v "${MEDIA_PATH}/Movies/Kids Films":/movies-kids \
-  lscr.io/linuxserver/radarr
+  lscr.io/linuxserver/radarr:develop
 
-# Lidarr
-podman run -d --name lidarr --pod ttserver \
+# Lidarr (develop version)
+podman run -d --name lidarr \
+  -p 2408:8686 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/lidarr:/config \
   -v ${DOWNLOADS_PATH}:/downloads \
   -v ${MEDIA_PATH}/Music:/music \
-  lscr.io/linuxserver/lidarr
+  lscr.io/linuxserver/lidarr:develop
 
-# Readarr
-podman run -d --name readarr --pod ttserver \
+# Readarr (develop version)
+podman run -d --name readarr \
+  -p 2409:8787 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -103,10 +92,11 @@ podman run -d --name readarr --pod ttserver \
   -v ${DOWNLOADS_PATH}:/downloads \
   -v "${MEDIA_PATH}/Books/Ebooks":/ebooks \
   -v "${MEDIA_PATH}/Books/Audiobooks":/audiobooks \
-  lscr.io/linuxserver/readarr
+  lscr.io/linuxserver/readarr:develop
 
 # Transmission
-podman run -d --name transmission --pod ttserver \
+podman run -d --name transmission \
+  -p 2402:9091 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -115,7 +105,8 @@ podman run -d --name transmission --pod ttserver \
   lscr.io/linuxserver/transmission
 
 # Prowlarr
-podman run -d --name prowlarr --pod ttserver \
+podman run -d --name prowlarr \
+  -p 2403:9117 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -123,40 +114,46 @@ podman run -d --name prowlarr --pod ttserver \
   lscr.io/linuxserver/prowlarr
 
 # Jellyfin
-podman run -d --name jellyfin --pod ttserver \
+podman run -d --name jellyfin \
+  -p 2410:8096 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/jellyfin:/config \
   -v ${MEDIA_PATH}:/media \
-  lscr.io/linuxserver/jellyfin
+  jellyfin/jellyfin
 
 # Jellyseerr
-podman run -d --name jellyseerr --pod ttserver \
+podman run -d --name jellyseerr \
+  -p 2411:5055 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/jellyseerr:/config \
-  lscr.io/linuxserver/jellyseerr
+  fallenbagel/jellyseerr
 
 # Nginx Proxy Manager
-podman run -d --name nginx-proxy-manager --pod ttserver \
+podman run -d --name nginx-proxy-manager \
+  -p 2404:80 \
+  -p 2405:443 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/nginx-proxy-manager/data:/data \
   -v ${CONFIG_DIR}/nginx-proxy-manager/letsencrypt:/etc/letsencrypt \
-  lscr.io/linuxserver/nginx-proxy-manager
+  jc21/nginx-proxy-manager
 
 # Homepage
-podman run -d --name homepage --pod ttserver \
+podman run -d --name homepage \
+  -p 2401:3000 \
   -v ${CONFIG_DIR}/homepage:/app/config \
   -v ${MEDIA_PATH}:/media \
   -v ${DOWNLOADS_PATH}:/downloads \
   ghcr.io/benphelps/homepage:latest
 
 # FlareSolverr
-podman run -d --name flaresolverr --pod ttserver \
+podman run -d --name flaresolverr \
+  -p 2412:8191 \
   -e LOG_LEVEL=info \
   -e LOG_HTML=false \
   -e CAPTCHA_SOLVER=none \

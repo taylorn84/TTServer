@@ -1,160 +1,121 @@
 #!/bin/bash
 
-# Define the base directory for ttserver setup
-BASE_DIR="$HOME/ttserver"
-CONFIG_DIR="$BASE_DIR/config"
-MEDIA_DIR="$BASE_DIR/media"
-DOWNLOADS_DIR="$BASE_DIR/downloads"
-
-# Create the base folder structure
-echo "Setting up folder structure under $BASE_DIR..."
-mkdir -p "$CONFIG_DIR"/{sonarr,radarr,lidarr,readarr,transmission,prowlarr,jellyfin,jellyseerr,nginx-proxy-manager,homepage}
-mkdir -p "$MEDIA_DIR"/{TV/{Shows,"Kids Shows"},Movies/{Films,"Kids Films"},Books/{Ebooks,Audiobooks},Music}
-mkdir -p "$DOWNLOADS_DIR"
-
-# Check if .env file exists in BASE_DIR; if not, create it with default values
-ENV_FILE="$BASE_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
-  echo "Creating .env file with default values at $ENV_FILE..."
-  cat <<EOL > "$ENV_FILE"
-# Base paths and environment variables for the ttserver setup
-BASE_PATH=$CONFIG_DIR
-DOWNLOADS_PATH=$DOWNLOADS_DIR
-MEDIA_PATH=$MEDIA_DIR
-PUID=1000
-PGID=1000
-TZ=Asia/Dubai
-EOL
-  echo ".env file created with default values. Please modify it as needed."
+# Update package list and install Cockpit if not already installed
+if ! command -v cockpit &> /dev/null; then
+    echo "Installing Cockpit..."
+    sudo apt-get update
+    sudo apt-get install -y cockpit
 else
-  echo ".env file already exists. Loading values..."
+    echo "Cockpit is already installed."
 fi
 
-# Load environment variables from the .env file
-export $(grep -v '^#' "$ENV_FILE" | xargs)
-
-# Install Podman if it's not already installed
-if ! command -v podman &> /dev/null; then
-  echo "Podman not found. Installing Podman..."
-  sudo apt update
-  sudo apt install -y podman
+# Enable and start Cockpit service if not already enabled
+if ! sudo systemctl is-enabled --quiet cockpit.socket; then
+    echo "Enabling and starting Cockpit service..."
+    sudo systemctl enable --now cockpit.socket
 else
-  echo "Podman is already installed."
+    echo "Cockpit service is already enabled and running."
 fi
 
-# Ensure the script has executable permissions (self-set)
-chmod +x "$0"
+# Set up Cockpit to listen on a custom port if configuration does not exist
+COCKPIT_CONFIG_DIR="/etc/systemd/system/cockpit.socket.d"
+COCKPIT_CONFIG_FILE="$COCKPIT_CONFIG_DIR/listen.conf"
+if [ ! -f "$COCKPIT_CONFIG_FILE" ]; then
+    echo "Setting custom port for Cockpit..."
+    sudo mkdir -p "$COCKPIT_CONFIG_DIR"
+    sudo bash -c 'cat > '"$COCKPIT_CONFIG_FILE"' << EOF
+[Socket]
+ListenStream=
+ListenStream=2400
+EOF'
+    sudo systemctl daemon-reload
+    sudo systemctl restart cockpit.socket
+else
+    echo "Cockpit custom port configuration already exists."
+fi
 
-# Run each container individually with correct image addresses and develop versions where applicable
+# Configure Netplan network settings if configuration file does not exist
+NETPLAN_CONFIG="/etc/netplan/00-installer-config.yaml"
+if [ ! -f "$NETPLAN_CONFIG" ]; then
+    echo "Configuring network settings with Netplan..."
+    sudo bash -c 'cat > '"$NETPLAN_CONFIG"' << EOF
+network:
+  version: 2
+  renderer: NetworkManager
+  ethernets:
+    esp4so:
+      dhcp4: false
+      dhcp6: false
+      addresses:
+        - 192.168.31.24/24
+      routes:
+        - to: default
+          via: 192.168.31.1
+      nameservers:
+        addresses: [8.8.8.8,8.8.4.4,192.168.31.1]
+EOF'
+    sudo netplan try
+else
+    echo "Netplan configuration already exists."
+fi
 
-# Sonarr (develop version)
-podman run -d --name sonarr \
-  -p 2406:8989 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/sonarr:/config \
-  -v ${DOWNLOADS_PATH}:/downloads \
-  -v "${MEDIA_PATH}/TV/Shows":/tv \
-  -v "${MEDIA_PATH}/TV/Kids Shows":/tv-kids \
-  lscr.io/linuxserver/sonarr:develop
+# Add 45Drives repository and update package list if not already done
+if ! grep -q "repo.45drives.com" /etc/apt/sources.list /etc/apt/sources.list.d/*; then
+    echo "Adding 45Drives repository and updating..."
+    curl -sSL https://repo.45drives.com/setup | sudo bash
+    sudo apt-get update
+else
+    echo "45Drives repository already added."
+fi
 
-# Radarr (develop version)
-podman run -d --name radarr \
-  -p 2407:7878 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/radarr:/config \
-  -v ${DOWNLOADS_PATH}:/downloads \
-  -v "${MEDIA_PATH}/Movies/Films":/movies \
-  -v "${MEDIA_PATH}/Movies/Kids Films":/movies-kids \
-  lscr.io/linuxserver/radarr:develop
+# Install additional Cockpit modules if not already installed
+if ! dpkg -l | grep -q "cockpit-file-sharing"; then
+    echo "Installing Cockpit modules..."
+    sudo apt install -y cockpit-file-sharing cockpit-navigator
+else
+    echo "Cockpit modules are already installed."
+fi
 
-# Lidarr (develop version)
-podman run -d --name lidarr \
-  -p 2408:8686 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/lidarr:/config \
-  -v ${DOWNLOADS_PATH}:/downloads \
-  -v ${MEDIA_PATH}/Music:/music \
-  lscr.io/linuxserver/lidarr:develop
+# Create directory /ttserver if not already created
+if [ ! -d "/ttserver" ]; then
+    echo "Creating /ttserver directory and setting ownership..."
+    sudo mkdir -p /ttserver
+    sudo chown -R ttserver:ttserver /ttserver
+else
+    echo "/ttserver directory already exists."
+fi
 
-# Readarr (develop version)
-podman run -d --name readarr \
-  -p 2409:8787 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/readarr:/config \
-  -v ${DOWNLOADS_PATH}:/downloads \
-  -v "${MEDIA_PATH}/Books/Ebooks":/ebooks \
-  -v "${MEDIA_PATH}/Books/Audiobooks":/audiobooks \
-  lscr.io/linuxserver/readarr:develop
+# Install Samba if not already installed
+if ! command -v smbd &> /dev/null; then
+    echo "Installing Samba..."
+    sudo apt install -y samba
+else
+    echo "Samba is already installed."
+fi
 
-# Transmission
-podman run -d --name transmission \
-  -p 2402:9091 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/transmission:/config \
-  -v ${DOWNLOADS_PATH}:/downloads \
-  lscr.io/linuxserver/transmission
+# Create Samba user 'nfserver' with specific password if user does not exist
+if ! sudo pdbedit -L | grep -q "nfserver"; then
+    echo "Creating Samba user 'nfserver' with password 'PenelopeTT2901'..."
+    (echo "PenelopeTT2901"; echo "PenelopeTT2901") | sudo smbpasswd -a nfserver
+else
+    echo "Samba user 'nfserver' already exists."
+fi
 
-# Prowlarr
-podman run -d --name prowlarr \
-  -p 2403:9117 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/prowlarr:/config \
-  lscr.io/linuxserver/prowlarr
+# Configure Samba to share /nfserver if not already configured
+SAMBA_CONFIG="/etc/samba/smb.conf"
+if ! grep -q "\[NFServer\]" "$SAMBA_CONFIG"; then
+    echo "Configuring Samba share..."
+    sudo mkdir -p /nfserver
+    sudo bash -c 'cat >> '"$SAMBA_CONFIG"' << EOF
 
-# Jellyfin
-podman run -d --name jellyfin \
-  -p 2410:8096 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/jellyfin:/config \
-  -v ${MEDIA_PATH}:/media \
-  jellyfin/jellyfin
+[NFServer]
+  path = /nfserver
+  read only = no
+  inherit permissions = yes
+EOF'
+    sudo systemctl restart smbd
+else
+    echo "Samba share configuration already exists."
+fi
 
-# Jellyseerr
-podman run -d --name jellyseerr \
-  -p 2411:5055 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/jellyseerr:/config \
-  fallenbagel/jellyseerr
-
-# Nginx Proxy Manager
-podman run -d --name nginx-proxy-manager \
-  -p 2404:80 \
-  -p 2405:443 \
-  -e PUID=$PUID \
-  -e PGID=$PGID \
-  -e TZ=$TZ \
-  -v ${CONFIG_DIR}/nginx-proxy-manager/data:/data \
-  -v ${CONFIG_DIR}/nginx-proxy-manager/letsencrypt:/etc/letsencrypt \
-  jc21/nginx-proxy-manager
-
-# Homepage
-podman run -d --name homepage \
-  -p 2401:3000 \
-  -v ${CONFIG_DIR}/homepage:/app/config \
-  -v ${MEDIA_PATH}:/media \
-  -v ${DOWNLOADS_PATH}:/downloads \
-  ghcr.io/benphelps/homepage:latest
-
-# FlareSolverr
-podman run -d --name flaresolverr \
-  -p 2412:8191 \
-  -e LOG_LEVEL=info \
-  -e LOG_HTML=false \
-  -e CAPTCHA_SOLVER=none \
-  ghcr.io/flaresolverr/flaresolverr:latest
+echo "Setup completed successfully!"
