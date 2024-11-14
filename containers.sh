@@ -6,11 +6,19 @@ CONFIG_DIR="$BASE_DIR/config"
 MEDIA_DIR="$BASE_DIR/media"
 DOWNLOADS_DIR="$BASE_DIR/downloads"
 
+# Fetch user and group IDs for ttserver
+PUID=$(id -u ttserver)
+PGID=$(id -g ttserver)
+
 # Create the base folder structure
 echo "Setting up folder structure under $BASE_DIR..."
 mkdir -p "$CONFIG_DIR"/{sonarr,radarr,lidarr,readarr,transmission,prowlarr,jellyfin,jellyseerr,nginx-proxy-manager,homepage}
 mkdir -p "$MEDIA_DIR"/{TV/{Shows,"Kids Shows"},Movies/{Films,"Kids Films"},Books/{Ebooks,Audiobooks},Music}
 mkdir -p "$DOWNLOADS_DIR"
+
+# Set ownership of all created directories to user 'ttserver' and group 'ttserver'
+echo "Setting ownership to user 'ttserver' and group 'ttserver'..."
+sudo chown -R ttserver:ttserver "$BASE_DIR"
 
 # Check if .env file exists in BASE_DIR; if not, create it with default values
 ENV_FILE="$BASE_DIR/.env"
@@ -21,8 +29,8 @@ if [ ! -f "$ENV_FILE" ]; then
 BASE_PATH=$CONFIG_DIR
 DOWNLOADS_PATH=$DOWNLOADS_DIR
 MEDIA_PATH=$MEDIA_DIR
-PUID=1000
-PGID=1000
+PUID=$PUID
+PGID=$PGID
 TZ=Asia/Dubai
 EOL
   echo ".env file created with default values. Please modify it as needed."
@@ -158,3 +166,5 @@ podman run -d --name flaresolverr \
   -e LOG_HTML=false \
   -e CAPTCHA_SOLVER=none \
   ghcr.io/flaresolverr/flaresolverr:latest
+
+echo "ttserver setup is complete, with all directories and containers set to user 'ttserver' and group 'ttserver'."
