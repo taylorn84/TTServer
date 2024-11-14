@@ -38,7 +38,7 @@ network:
         - to: default
           via: 192.168.31.1
       nameservers:
-        addresses: [192.168.31.1]
+        addresses: [8.8.8.8,8.8.4.4,192.168.31.1]
 EOF
 
 # Apply Netplan configuration
