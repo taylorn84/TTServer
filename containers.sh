@@ -56,8 +56,9 @@ sudo podman pod create --name ttserver \
   -p 2401:3000 \
   -p 2402:9091 \
   -p 2403:9117 \
-  -p 2404:80 \
-  -p 2405:443 \
+  -p 2480:80 \
+  -p 2481:81 \
+  -p 2443:443 \
   -p 2406:8989 \
   -p 2407:7878 \
   -p 2408:8686 \
@@ -150,7 +151,7 @@ sudo podman run -d --pod ttserver --name jellyseerr \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
-  -v ${CONFIG_DIR}/jellyseerr:/config \
+  -v ${CONFIG_DIR}/jellyseerr:/app/config \
   docker.io/fallenbagel/jellyseerr:develop
 
 # Nginx Proxy Manager
