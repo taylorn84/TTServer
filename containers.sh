@@ -12,9 +12,9 @@ PGID=$(id -g ttserver)
 
 # Create the base folder structure with required subdirectories
 echo "Setting up folder structure under $BASE_DIR..."
-mkdir -p "$CONFIG_DIR"/{sonarr,radarr,lidarr,readarr,transmission,prowlarr,jellyfin,jellyseerr,nginx-proxy-manager/{data,letsencrypt},homepage}
-mkdir -p "$MEDIA_DIR"/{TV/{Shows,"Kids Shows"},Movies/{Films,"Kids Films"},Books/{Ebooks,Audiobooks},Music}
-mkdir -p "$DOWNLOADS_DIR"
+sudo mkdir -p "$CONFIG_DIR"/{sonarr,radarr,lidarr,readarr,transmission,prowlarr,jellyfin,jellyseerr,nginx-proxy-manager/{data,letsencrypt},homepage}
+sudo mkdir -p "$MEDIA_DIR"/{TV/{Shows,"Kids Shows"},Movies/{Films,"Kids Films"},Books/{Ebooks,Audiobooks},Music}
+sudo mkdir -p "$DOWNLOADS_DIR"
 
 # Set ownership of all created directories to user 'ttserver' and group 'ttserver'
 echo "Setting ownership to user 'ttserver' and group 'ttserver'..."
@@ -24,7 +24,7 @@ sudo chown -R ttserver:ttserver "$BASE_DIR"
 ENV_FILE="$BASE_DIR/.env"
 if [ ! -f "$ENV_FILE" ]; then
   echo "Creating .env file with default values at $ENV_FILE..."
-  cat <<EOL > "$ENV_FILE"
+  sudo bash -c "cat <<EOL > '$ENV_FILE'
 # Base paths and environment variables for the ttserver setup
 BASE_PATH=$CONFIG_DIR
 DOWNLOADS_PATH=$DOWNLOADS_DIR
@@ -32,7 +32,7 @@ MEDIA_PATH=$MEDIA_DIR
 PUID=$PUID
 PGID=$PGID
 TZ=Asia/Dubai
-EOL
+EOL"
   echo ".env file created with default values. Please modify it as needed."
 else
   echo ".env file already exists. Loading values..."
@@ -50,15 +50,27 @@ else
   echo "Podman is already installed."
 fi
 
-# Ensure the script has executable permissions (self-set)
-chmod +x "$0"
+# Create the pod with the necessary port mappings
+echo "Creating pod 'ttserver' with specified ports..."
+sudo podman pod create --name ttserver \
+  -p 2401:3000 \
+  -p 2402:9091 \
+  -p 2403:9117 \
+  -p 2404:80 \
+  -p 2405:443 \
+  -p 2406:8989 \
+  -p 2407:7878 \
+  -p 2408:8686 \
+  -p 2409:8787 \
+  -p 2410:8096 \
+  -p 2411:5055 \
+  -p 2412:8191
 
-# Run each container individually with correct image addresses and develop versions where applicable
+# Run each container within the 'ttserver' pod
 
 # Sonarr (develop version)
-podman run -d --name sonarr \
+sudo podman run -d --pod ttserver --name sonarr \
   --user $PUID:$PGID \
-  -p 2406:8989 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -69,9 +81,8 @@ podman run -d --name sonarr \
   lscr.io/linuxserver/sonarr:develop
 
 # Radarr (develop version)
-podman run -d --name radarr \
+sudo podman run -d --pod ttserver --name radarr \
   --user $PUID:$PGID \
-  -p 2407:7878 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -82,9 +93,8 @@ podman run -d --name radarr \
   lscr.io/linuxserver/radarr:develop
 
 # Lidarr (develop version)
-podman run -d --name lidarr \
+sudo podman run -d --pod ttserver --name lidarr \
   --user $PUID:$PGID \
-  -p 2408:8686 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -94,9 +104,8 @@ podman run -d --name lidarr \
   lscr.io/linuxserver/lidarr:develop
 
 # Readarr (develop version)
-podman run -d --name readarr \
+sudo podman run -d --pod ttserver --name readarr \
   --user $PUID:$PGID \
-  -p 2409:8787 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -107,9 +116,8 @@ podman run -d --name readarr \
   lscr.io/linuxserver/readarr:develop
 
 # Transmission
-podman run -d --name transmission \
+sudo podman run -d --pod ttserver --name transmission \
   --user $PUID:$PGID \
-  -p 2402:9091 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -118,9 +126,8 @@ podman run -d --name transmission \
   lscr.io/linuxserver/transmission:latest
 
 # Prowlarr
-podman run -d --name prowlarr \
+sudo podman run -d --pod ttserver --name prowlarr \
   --user $PUID:$PGID \
-  -p 2403:9117 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -128,9 +135,8 @@ podman run -d --name prowlarr \
   lscr.io/linuxserver/prowlarr:develop
 
 # Jellyfin
-podman run -d --name jellyfin \
+sudo podman run -d --pod ttserver --name jellyfin \
   --user $PUID:$PGID \
-  -p 2410:8096 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -139,9 +145,8 @@ podman run -d --name jellyfin \
   lscr.io/linuxserver/jellyfin:latest
 
 # Jellyseerr
-podman run -d --name jellyseerr \
+sudo podman run -d --pod ttserver --name jellyseerr \
   --user $PUID:$PGID \
-  -p 2411:5055 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -149,10 +154,8 @@ podman run -d --name jellyseerr \
   docker.io/fallenbagel/jellyseerr:develop
 
 # Nginx Proxy Manager
-podman run -d --name nginx-proxy-manager \
+sudo podman run -d --pod ttserver --name nginx-proxy-manager \
   --user $PUID:$PGID \
-  -p 2404:80 \
-  -p 2405:443 \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
@@ -161,18 +164,16 @@ podman run -d --name nginx-proxy-manager \
   docker.io/jc21/nginx-proxy-manager:latest
 
 # Homepage
-podman run -d --name homepage \
+sudo podman run -d --pod ttserver --name homepage \
   --user $PUID:$PGID \
-  -p 2401:3000 \
   -v ${CONFIG_DIR}/homepage:/app/config \
   -v ${MEDIA_PATH}:/media \
   -v ${DOWNLOADS_PATH}:/downloads \
   ghcr.io/benphelps/homepage:latest
 
 # FlareSolverr
-podman run -d --name flaresolverr \
+sudo podman run -d --pod ttserver --name flaresolverr \
   --user $PUID:$PGID \
-  -p 2412:8191 \
   -e LOG_LEVEL=info \
   -e LOG_HTML=false \
   -e CAPTCHA_SOLVER=none \
