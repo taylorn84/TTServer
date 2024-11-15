@@ -157,6 +157,7 @@ sudo podman run -d --pod ttserver --name jellyseerr \
 # Nginx Proxy Manager
 sudo podman run -d --pod ttserver --name nginx-proxy-manager \
   --user $PUID:$PGID \
+  --security-opt label=disable \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
