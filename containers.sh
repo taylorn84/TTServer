@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the base directory for ttserver setup
-BASE_DIR="$HOME"
+BASE_DIR="/ttserver"
 CONFIG_DIR="$BASE_DIR/config"
 MEDIA_DIR="$BASE_DIR/media"
 DOWNLOADS_DIR="$BASE_DIR/downloads"
