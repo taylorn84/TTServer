@@ -43,7 +43,7 @@ network:
   version: 2
   renderer: NetworkManager
   ethernets:
-    esp4so:
+    esp4s0:
       dhcp4: false
       dhcp6: false
       addresses:
