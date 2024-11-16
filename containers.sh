@@ -50,27 +50,10 @@ else
   echo "Podman is already installed."
 fi
 
-# Create the pod with the necessary port mappings
-echo "Creating pod 'ttserver' with specified ports..."
-sudo podman pod create --name ttserver \
-  -p 2401:3000 \
-  -p 2402:9091 \
-  -p 2403:9117 \
-  -p 2480:80 \
-  -p 2481:81 \
-  -p 2443:443 \
-  -p 2406:8989 \
-  -p 2407:7878 \
-  -p 2408:8686 \
-  -p 2409:8787 \
-  -p 2410:8096 \
-  -p 2411:5055 \
-  -p 2412:8191
+# Run each container independently
 
-# Run each container within the 'ttserver' pod
-
-# Sonarr (develop version)
-sudo podman run -d --pod ttserver --name sonarr \
+# Sonarr
+sudo podman run -d --name sonarr \
   --user $PUID:$PGID \
   -e PUID=$PUID \
   -e PGID=$PGID \
@@ -79,10 +62,11 @@ sudo podman run -d --pod ttserver --name sonarr \
   -v ${DOWNLOADS_PATH}:/downloads \
   -v "${MEDIA_PATH}/TV/Shows":/tv \
   -v "${MEDIA_PATH}/TV/Kids Shows":/tv-kids \
+  -p 2406:8989 \
   lscr.io/linuxserver/sonarr:develop
 
-# Radarr (develop version)
-sudo podman run -d --pod ttserver --name radarr \
+# Radarr
+sudo podman run -d --name radarr \
   --user $PUID:$PGID \
   -e PUID=$PUID \
   -e PGID=$PGID \
@@ -91,10 +75,11 @@ sudo podman run -d --pod ttserver --name radarr \
   -v ${DOWNLOADS_PATH}:/downloads \
   -v "${MEDIA_PATH}/Movies/Films":/movies \
   -v "${MEDIA_PATH}/Movies/Kids Films":/movies-kids \
+  -p 2407:7878 \
   lscr.io/linuxserver/radarr:develop
 
-# Lidarr (develop version)
-sudo podman run -d --pod ttserver --name lidarr \
+# Lidarr
+sudo podman run -d --name lidarr \
   --user $PUID:$PGID \
   -e PUID=$PUID \
   -e PGID=$PGID \
@@ -102,10 +87,11 @@ sudo podman run -d --pod ttserver --name lidarr \
   -v ${CONFIG_DIR}/lidarr:/config \
   -v ${DOWNLOADS_PATH}:/downloads \
   -v ${MEDIA_PATH}/Music:/music \
+  -p 2408:8686 \
   lscr.io/linuxserver/lidarr:develop
 
-# Readarr (develop version)
-sudo podman run -d --pod ttserver --name readarr \
+# Readarr
+sudo podman run -d --name readarr \
   --user $PUID:$PGID \
   -e PUID=$PUID \
   -e PGID=$PGID \
@@ -114,48 +100,53 @@ sudo podman run -d --pod ttserver --name readarr \
   -v ${DOWNLOADS_PATH}:/downloads \
   -v "${MEDIA_PATH}/Books/Ebooks":/ebooks \
   -v "${MEDIA_PATH}/Books/Audiobooks":/audiobooks \
+  -p 2409:8787 \
   lscr.io/linuxserver/readarr:develop
 
 # Transmission
-sudo podman run -d --pod ttserver --name transmission \
+sudo podman run -d --name transmission \
   --user $PUID:$PGID \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/transmission:/config \
   -v ${DOWNLOADS_PATH}:/downloads \
+  -p 2402:9091 \
   lscr.io/linuxserver/transmission:latest
 
 # Prowlarr
-sudo podman run -d --pod ttserver --name prowlarr \
+sudo podman run -d --name prowlarr \
   --user $PUID:$PGID \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/prowlarr:/config \
+  -p 2403:9117 \
   lscr.io/linuxserver/prowlarr:develop
 
 # Jellyfin
-sudo podman run -d --pod ttserver --name jellyfin \
+sudo podman run -d --name jellyfin \
   --user $PUID:$PGID \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/jellyfin:/config \
   -v ${MEDIA_PATH}:/media \
+  -p 2410:8096 \
   lscr.io/linuxserver/jellyfin:latest
 
 # Jellyseerr
-sudo podman run -d --pod ttserver --name jellyseerr \
+sudo podman run -d --name jellyseerr \
   --user $PUID:$PGID \
   -e PUID=$PUID \
   -e PGID=$PGID \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/jellyseerr:/app/config \
+  -p 2411:5055 \
   docker.io/fallenbagel/jellyseerr:develop
 
 # Nginx Proxy Manager
-sudo podman run -d --pod ttserver --name nginx-proxy-manager \
+sudo podman run -d --name nginx-proxy-manager \
   --user $PUID:$PGID \
   --security-opt label=disable \
   -e PUID=$PUID \
@@ -163,22 +154,26 @@ sudo podman run -d --pod ttserver --name nginx-proxy-manager \
   -e TZ=$TZ \
   -v ${CONFIG_DIR}/nginx-proxy-manager/data:/data \
   -v ${CONFIG_DIR}/nginx-proxy-manager/letsencrypt:/etc/letsencrypt \
+  -p 2480:80 \
+  -p 2443:443 \
   docker.io/jc21/nginx-proxy-manager:latest
 
 # Homepage
-sudo podman run -d --pod ttserver --name homepage \
+sudo podman run -d --name homepage \
   --user $PUID:$PGID \
   -v ${CONFIG_DIR}/homepage:/app/config \
   -v ${MEDIA_PATH}:/media \
   -v ${DOWNLOADS_PATH}:/downloads \
+  -p 2401:3000 \
   ghcr.io/benphelps/homepage:latest
 
 # FlareSolverr
-sudo podman run -d --pod ttserver --name flaresolverr \
+sudo podman run -d --name flaresolverr \
   --user $PUID:$PGID \
   -e LOG_LEVEL=info \
   -e LOG_HTML=false \
   -e CAPTCHA_SOLVER=none \
+  -p 2412:8191 \
   ghcr.io/flaresolverr/flaresolverr:latest
 
 echo "ttserver setup is complete, with all directories and containers set to user 'ttserver' and group 'ttserver'."
