@@ -25,9 +25,11 @@ for folder in "${folders[@]}"; do
             folder_name=$(basename "$(dirname "$(dirname "$folder")")")
             # Construct the new filename
             new_filename="${folder_name}-backup.zip"
-            # Move and rename the file
-            mv "$newest_file" "$destination_folder/$new_filename"
-            echo "Moved and renamed $newest_file to $destination_folder/$new_filename"
+            # Full destination path
+            destination_path="$destination_folder/$new_filename"
+            # Move the file and overwrite the existing one
+            mv -f "$newest_file" "$destination_path"
+            echo "Moved and renamed $newest_file to $destination_path"
         else
             echo "No files found in $folder"
         fi
