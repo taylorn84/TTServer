@@ -13,7 +13,7 @@ destination_folder="/nfserver/media-automation-backups/"
 
 # GitHub repository information
 github_repo_url="https://github.com/taylorn84/TTServer.git"
-github_repo_folder="/nfserver/media-automation-backup/git"
+github_repo_folder="/nfserver/media-automation-backups/git"
 
 # Ensure the destination folder exists
 mkdir -p "$destination_folder"
