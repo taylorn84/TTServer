@@ -9,7 +9,7 @@ folders=(
 )
 
 # Destination folder for local backups (also the GitHub repository folder)
-github_repo_folder="/nfserver/media-automation-backups/"
+github_repo_folder="/nfserver/media-automation-backups/git"
 backups_folder="$github_repo_folder/backups"
 
 # GitHub repository URL
