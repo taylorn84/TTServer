@@ -28,27 +28,27 @@ echo "Running Servarr Install Script - Version ${brown}[$scriptversion]${reset} 
 echo ""
 
 echo "Select the application to install: "
-select app in lidarr prowlarr radarr readarr whisparr quit; do
+select app in lidarr prowlarr radarr readarr sonarr quit; do
     case $app in
     lidarr)
         app_port="8686"
         app_prereq="curl sqlite3 libchromaprint-tools mediainfo"
         app_umask="0002"
-        branch="master"
+        branch="develop"
         break
         ;;
     prowlarr)
         app_port="9696"
         app_prereq="curl sqlite3"
         app_umask="0002"
-        branch="master"
+        branch="develop"
         break
         ;;
     radarr)
         app_port="7878"
         app_prereq="curl sqlite3"
         app_umask="0002"
-        branch="master"
+        branch="develop"
         break
         ;;
     readarr)
@@ -58,11 +58,11 @@ select app in lidarr prowlarr radarr readarr whisparr quit; do
         branch="develop"
         break
         ;;
-    whisparr)
-        app_port="6969"
+    sonarr)
+        app_port="8989"
         app_prereq="curl sqlite3"
         app_umask="0002"
-        branch="nightly"
+        branch="develop"
         break
         ;;
     quit)
@@ -80,14 +80,12 @@ bindir="${installdir}/${app^}"
 datadir="/home-server/media-automation/$app/config"
 app_bin=${app^}
 
-# Prompt for user and group
-read -r -p "What user should [${app^}] run as? (Default: $app): " app_uid
-app_uid=${app_uid:-$app}
-read -r -p "What group should [${app^}] run as? (Default: media): " app_guid
-app_guid=${app_guid:-media}
+# Default user and group to ttserver
+app_uid="ttserver"
+app_guid="ttserver"
 
-# Confirm installation details
 echo -e "${brown}[${app^}]${reset} will be installed to ${brown}[$bindir]${reset} and use ${brown}[$datadir]${reset} for AppData."
+echo -e "The application will run as user ${brown}[$app_uid]${reset} and group ${brown}[$app_guid]${reset}."
 read -r -p "Type 'yes' to continue with the installation: " response
 if [[ $response != "yes" ]]; then
     echo "Operation canceled. Exiting script."
