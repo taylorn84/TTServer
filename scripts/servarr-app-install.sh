@@ -77,7 +77,7 @@ done
 ### Custom paths
 installdir="/home-server/media-automation"
 bindir="${installdir}/${app^}"
-datadir="/home-server/media-automation/$app/config"
+datadir="/home-server/media-automation/${app^}/config"
 app_bin=${app^}
 
 # Default user and group to ttserver
